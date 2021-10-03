@@ -1,0 +1,11 @@
+---
+- name: enable wordpress site
+  command: >
+    a2ensite wordpress
+  notify:
+  - restart apache2
+
+- name: restart apache2
+  service:
+    name: apache2
+    state: restarted

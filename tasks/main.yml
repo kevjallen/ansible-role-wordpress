@@ -1,0 +1,109 @@
+---
+- name: ensure system dependencies are present
+  apt:
+    name:
+    - apache2
+    - ghostscript
+    - libapache2-mod-php
+    - mysql-client
+    - php
+    - php-bcmath
+    - php-curl
+    - php-imagick
+    - php-intl
+    - php-json
+    - php-mbstring
+    - php-mysql
+    - php-xml
+    - php-zip
+    update_cache: yes
+    state: present
+
+- name: ensure apache2 rewrite module is present
+  community.general.apache2_module:
+    state: present
+    name: rewrite
+
+- name: ensure apache2 ssl module is present
+  community.general.apache2_module:
+    name: ssl
+    state: present
+
+- include: certbot.yml
+- include: database.yml
+
+- name: ensure wordpress cli is present
+  get_url:
+    url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    dest: /usr/local/bin/wp
+    mode: 0755
+
+- name: ensure web root directory has proper permissions
+  file:
+    state: directory
+    path: /srv/www
+    owner: www-data
+    group: www-data
+    mode: 0755
+  register: web_root
+
+- name: ensure wordpress root directory has proper permissions
+  file:
+    state: directory
+    path: "{{ web_root.path }}/wordpress"
+    owner: "{{ web_root.owner }}"
+    group: "{{ web_root.group }}"
+    mode: 0755
+  register: wp_root
+
+- name: find files in wordpress root directory
+  find:
+    path: "{{ wp_root.path }}"
+  register: wp_root_find
+
+- name: download wordpress files
+  command: >
+    wp core download \
+      --path='{{ wp_root.path }}'
+  when: (wp_root_find.files|length) == 0
+  become_user: "{{ web_root.owner }}"
+
+- name: create wordpress config
+  command: >
+    wp config create \
+      --dbname='wordpress' \
+      --dbuser='wordpress' \
+      --dbpass='{{ wp_mysql_password }}' \
+      --path='{{ wp_root.path }}'
+  args:
+    creates: "{{ wp_root.path }}/wp-config.php"
+  become_user: "{{ web_root.owner }}"
+
+- name: check for existing wp_options table
+  community.mysql.mysql_query:
+    login_db: wordpress
+    login_user: wordpress
+    login_password: "{{ wp_mysql_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query: SHOW TABLES LIKE 'wp_options';
+  register: wp_options_query
+
+- name: install wordpress site
+  command: >
+    wp core install \
+      --url='{{ server_name }}' \
+      --title='{{ wp_title }}' \
+      --admin_user='{{ wp_admin_user }}' \
+      --admin_password='{{ wp_admin_password }}' \
+      --admin_email='{{ wp_admin_email }}' \
+      --path='{{ wp_root.path }}'
+  become_user: "{{ web_root.owner }}"
+  when: wp_options_query.rowcount == [0]
+
+- name: template wordpress apache2 config
+  template:
+    src: wordpress.conf.j2
+    dest: /etc/apache2/sites-available/wordpress.conf
+    mode: 0644
+  notify:
+  - enable wordpress site

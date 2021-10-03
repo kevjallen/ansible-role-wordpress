@@ -1,0 +1,39 @@
+---
+- name: ensure certbot is present
+  community.general.snap:
+    classic: yes
+    name: certbot
+    state: present
+
+- name: check for existing ssl certificate
+  stat:
+    path: /etc/letsencrypt/live/{{ server_name }}/cert.pem
+  register: ssl_certificate
+
+- name: obtain ssl certificate
+  command: >
+    certbot certonly \
+      --apache \
+      --agree-tos \
+      -d {{ server_name }} \
+      -d www.{{ server_name }} \
+      --email {{ server_email }}
+  when: not ssl_certificate.stat.exists
+
+- name: copy certbot systemd service
+  copy:
+    src: certbot.service
+    dest: /etc/systemd/system/certbot.service
+    mode: 0644
+
+- name: copy certbot systemd timer
+  copy:
+    src: certbot.timer
+    dest: /etc/systemd/system/certbot.timer
+    mode: 0644
+
+- name: enable certbot systemd timer
+  service:
+    name: certbot.timer
+    state: started
+    enabled: yes

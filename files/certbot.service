@@ -1,0 +1,6 @@
+[Unit]
+Description=Letsencrypt renewal service
+
+[Service]
+Type=oneshot
+ExecStart=/snap/bin/certbot renew --quiet --agree-tos

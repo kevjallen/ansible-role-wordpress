@@ -1,0 +1,31 @@
+---
+- name: ensure system dependencies are present
+  apt:
+    name:
+    - mysql-server
+    - python3
+    - python3-pip
+    update_cache: yes
+    state: present
+
+- name: ensure python dependencies are present
+  pip:
+    name:
+    - pymysql
+    state: present
+
+- name: ensure mysql database is present
+  community.mysql.mysql_db:
+    name: wordpress
+    check_implicit_admin: yes
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    state: present
+
+- name: ensure mysql user is present
+  community.mysql.mysql_user:
+    name: wordpress
+    password: "{{ wp_mysql_password }}"
+    priv: 'wordpress.*:ALL'
+    check_implicit_admin: yes
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    state: present
