@@ -1,4 +1,7 @@
 ---
+create_database: yes
+create_ssl_certificate: no
+
 server_name: example.com
 server_email: user@example.com
 

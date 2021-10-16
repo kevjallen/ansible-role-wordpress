@@ -30,7 +30,10 @@
     state: present
 
 - include: certbot.yml
+  when: create_ssl_certificate
+
 - include: database.yml
+  when: create_database
 
 - name: ensure wordpress cli is present
   get_url:
@@ -64,19 +67,8 @@
 - name: download wordpress files
   command: >
     wp core download \
-      --path='{{ wp_root.path }}'
+      --path="{{ wp_root.path }}"
   when: (wp_root_find.files|length) == 0
-  become_user: "{{ web_root.owner }}"
-
-- name: create wordpress config
-  command: >
-    wp config create \
-      --dbname='wordpress' \
-      --dbuser='wordpress' \
-      --dbpass='{{ wp_mysql_password }}' \
-      --path='{{ wp_root.path }}'
-  args:
-    creates: "{{ wp_root.path }}/wp-config.php"
   become_user: "{{ web_root.owner }}"
 
 - name: check for existing wp_options table
@@ -84,25 +76,36 @@
     login_db: wordpress
     login_user: wordpress
     login_password: "{{ wp_mysql_password }}"
-    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_host: "{{ wp_mysql_host | default('localhost') }}"
     query: SHOW TABLES LIKE 'wp_options';
   register: wp_options_query
+
+- name: create wordpress config
+  command: >
+    wp config create \
+      --dbname='wordpress' \
+      --dbuser='wordpress' \
+      --dbpass="{{ wp_mysql_password }}" \
+      --path="{{ wp_root.path }}"
+  args:
+    creates: "{{ wp_root.path }}/wp-config.php"
+  become_user: "{{ web_root.owner }}"
 
 - name: install wordpress site
   command: >
     wp core install \
-      --url='{{ server_name }}' \
-      --title='{{ wp_title }}' \
-      --admin_user='{{ wp_admin_user }}' \
-      --admin_password='{{ wp_admin_password }}' \
-      --admin_email='{{ wp_admin_email }}' \
-      --path='{{ wp_root.path }}'
+      --url="{{ server_name }}" \
+      --title="{{ wp_title }}" \
+      --admin_user="{{ wp_admin_user }}" \
+      --admin_password="{{ wp_admin_password }}" \
+      --admin_email="{{ wp_admin_email }}" \
+      --path="{{ wp_root.path }}"
   become_user: "{{ web_root.owner }}"
   when: wp_options_query.rowcount == [0]
 
 - name: template wordpress apache2 config
   template:
-    src: wordpress.conf.j2
+    src: "{{ 'https.conf.j2' if create_ssl_certificate else 'http.conf.j2' }}"
     dest: /etc/apache2/sites-available/wordpress.conf
     mode: 0644
   notify:
