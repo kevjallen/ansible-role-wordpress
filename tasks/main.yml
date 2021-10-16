@@ -1,4 +1,10 @@
 ---
+- include: certbot.yml
+  when: create_ssl_certificate
+
+- include: database.yml
+  when: create_database
+
 - name: ensure system dependencies are present
   apt:
     name:
@@ -18,22 +24,6 @@
     - php-zip
     update_cache: yes
     state: present
-
-- name: ensure apache2 rewrite module is present
-  community.general.apache2_module:
-    state: present
-    name: rewrite
-
-- name: ensure apache2 ssl module is present
-  community.general.apache2_module:
-    name: ssl
-    state: present
-
-- include: certbot.yml
-  when: create_ssl_certificate
-
-- include: database.yml
-  when: create_database
 
 - name: ensure wordpress cli is present
   get_url:
@@ -102,6 +92,11 @@
       --path="{{ wp_root.path }}"
   become_user: "{{ web_root.owner }}"
   when: wp_options_query.rowcount == [0]
+
+- name: ensure apache2 rewrite module is present
+  community.general.apache2_module:
+    state: present
+    name: rewrite
 
 - name: template wordpress apache2 config
   template:

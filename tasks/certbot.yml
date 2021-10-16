@@ -1,8 +1,20 @@
 ---
+- name: ensure system dependencies are present
+  apt:
+    name:
+    - apache2
+    update_cache: yes
+    state: present
+
 - name: ensure certbot is present
   community.general.snap:
     classic: yes
     name: certbot
+    state: present
+
+- name: ensure apache2 ssl module is present
+  community.general.apache2_module:
+    name: ssl
     state: present
 
 - name: check for existing ssl certificate
