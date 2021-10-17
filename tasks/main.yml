@@ -93,10 +93,33 @@
   become_user: "{{ web_root.owner }}"
   when: wp_options_query.rowcount == [0]
 
+- name: ensure apache2 expires module is present
+  community.general.apache2_module:
+    name: expires
+    state: present
+  notify:
+  - restart apache2
+
+- name: ensure apache2 ext_filter module is present
+  community.general.apache2_module:
+    name: ext_filter
+    state: present
+  notify:
+  - restart apache2
+
+- name: ensure apache2 headers module is present
+  community.general.apache2_module:
+    name: headers
+    state: present
+  notify:
+  - restart apache2
+
 - name: ensure apache2 rewrite module is present
   community.general.apache2_module:
     state: present
     name: rewrite
+  notify:
+  - restart apache2
 
 - name: template wordpress apache2 config
   template:

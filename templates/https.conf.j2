@@ -11,7 +11,7 @@
     DocumentRoot {{ wp_root.path }}
     <Directory {{ wp_root.path }}>
         Options FollowSymLinks
-        AllowOverride Limit Options FileInfo
+        AllowOverride Limit Options FileInfo Indexes
         DirectoryIndex index.php
         Require all granted
     </Directory>

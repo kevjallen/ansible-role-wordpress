@@ -12,11 +12,6 @@
     name: certbot
     state: present
 
-- name: ensure apache2 ssl module is present
-  community.general.apache2_module:
-    name: ssl
-    state: present
-
 - name: check for existing ssl certificate
   stat:
     path: /etc/letsencrypt/live/{{ server_name }}/cert.pem
@@ -49,3 +44,10 @@
     name: certbot.timer
     state: started
     enabled: yes
+
+- name: ensure apache2 ssl module is present
+  community.general.apache2_module:
+    name: ssl
+    state: present
+  notify:
+  - restart apache2
