@@ -23,7 +23,6 @@
       --apache \
       --agree-tos \
       -d {{ server_name }} \
-      -d www.{{ server_name }} \
       --email {{ server_email }}
   when: not ssl_certificate.stat.exists
 
